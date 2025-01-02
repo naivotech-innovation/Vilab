@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paytm Payment</title>
+    <link rel="stylesheet" href="assets/css/payment.css">
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <div class="payment-container">
+        <h1>Paytm Payment</h1>
+        <div id="course-details">
+            <p>Course: <span id="course-title"></span></p>
+            <p>Price: ₹<span id="course-price"></span></p>
+        </div>
+        <div class="paytm-qr">
+            <img id="qr-code" src="" alt="Paytm QR Code">
+            <p>Scan the QR code using Paytm to complete the payment.</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const courseTitle = urlParams.get('courseTitle');
+            const coursePrice = urlParams.get('coursePrice');
+
+            document.getElementById('course-title').innerText = courseTitle;
+            document.getElementById('course-price').innerText = coursePrice;
+
+            // Fetch and display the QR code
+            document.getElementById('qr-code').src = `/generate-qr?amount=${coursePrice}`;
+
+            // Poll for payment status
+            const paymentId = 'some-generated-payment-id'; // Replace with actual payment ID from your system
+            const pollPaymentStatus = () => {
+                axios.get(`http://localhost:3000/payment-status?payment_id=${paymentId}`)
+                    .then(response => {
+                        if (response.data.status === 'success') {
+                            // Payment was successful
+                            axios.post('http://localhost:3000/payment', {
+                                user_id: 1, // Replace with the actual user ID
+                                course_id: 1, // Replace with the actual course ID
+                                payment_method: 'paytm',
+                                amount: coursePrice,
+                                payment_id: paymentId
+                            }).then(() => {
+                                alert('Payment successful!');
+                                window.location.href = 'user-profile.html';
+                            }).catch(error => {
+                                console.error('Payment failed:', error);
+                                alert('Payment failed!');
+                            });
+                        } else {
+                            // Poll again after 5 seconds
+                            setTimeout(pollPaymentStatus, 5000);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error polling payment status:', error);
+                        alert('Error checking payment status!');
+                    });
+            };
+
+            // Start polling
+            pollPaymentStatus();
+        });
+    </script>
+</body>
+</html>
