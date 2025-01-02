@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Page</title>
+    <link rel="stylesheet" href="assets/css/payment.css">
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+    <div class="payment-container">
+        <h1>Payment Page</h1>
+        <div id="course-details">
+            <p>Course: <span id="course-title"></span></p>
+            <p>Price: ₹<span id="course-price"></span></p>
+        </div>
+        <div class="payment-methods">
+            <h2>Select Payment Method</h2>
+            <form id="payment-form">
+                <div class="payment-option">
+                    <input type="radio" id="debit-card" name="payment-method" value="debit-card" required>
+                    <label for="debit-card">Debit Card</label>
+                </div>
+                <div class="payment-option">
+                    <input type="radio" id="phonepe" name="payment-method" value="phonepe">
+                    <label for="phonepe">PhonePe</label>
+                </div>
+                <div class="payment-option">
+                    <input type="radio" id="paytm" name="payment-method" value="paytm">
+                    <label for="paytm">Paytm QR Code</label>
+                </div>
+                <div class="payment-option">
+                    <input type="radio" id="razorpay" name="payment-method" value="razorpay">
+                    <label for="razorpay">Razorpay</label>
+                </div>
+                <button type="button" id="pay-now-button">Pay Now</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const courseTitle = urlParams.get('coursetitle');
+            const coursePrice = urlParams.get('coursePrice');
+
+            document.getElementById('course-title').innerText = courseTitle;
+            document.getElementById('course-price').innerText = coursePrice;
+        });
+
+        document.getElementById('pay-now-button').addEventListener('click', () => {
+            const paymentMethod = document.querySelector('input[name="payment-method"]:checked').value;
+            const urlParams = new URLSearchParams(window.location.search);
+            const courseTitle = urlParams.get('coursetitle');
+            const coursePrice = urlParams.get('coursePrice');
+
+            if (paymentMethod === 'razorpay') {
+                const options = {
+                    key: 'rzp_test_1DP5mmOlF5G5ag', // Replace with your Razorpay API key
+                    amount: coursePrice * 100, // Razorpay works with paise, not rupees
+                    currency: 'INR',
+                    name: courseTitle,
+                    description: `Payment for ${courseTitle}`,
+                    handler: function(response) {
+                        console.log(response);
+                        axios.post('http://localhost:3000/payment', {
+                            user_id: 1, // Replace with the actual user ID
+                            course_id: 1, // Replace with the actual course ID
+                            payment_method: 'razorpay',
+                            amount: coursePrice,
+                            payment_id: response.razorpay_payment_id
+                        }).then(() => {
+                            alert('Payment successful!');
+                            window.location.href = 'user-profile.html';
+                        }).catch(error => {
+                            console.error('Payment failed:', error);
+                            alert('Payment failed!');
+                        });
+                    },
+                    prefill: {
+                        name: 'John Doe', // Replace with the actual user's name
+                        email: 'john.doe@example.com' // Replace with the actual user's email
+                    },
+                    theme: {
+                        color: '#3399cc'
+                    }
+                };
+
+                const rzp = new Razorpay(options);
+                rzp.open();
+            } else if (paymentMethod === 'paytm') {
+                // Redirect to Paytm payment page
+                const paymentUrl = `paytm-payment.html?courseTitle=${courseTitle}&coursePrice=${coursePrice}`;
+                window.location.href = paymentUrl;
+            } else {
+                let paymentUrl;
+                switch(paymentMethod) {
+                    case 'debit-card':
+                        paymentUrl = `debit-card-payment.html?courseName=${courseTitle}&coursePrice=${coursePrice}`;
+                        break;
+                    case 'phonepe':
+                        paymentUrl = `phonepe-payment.html?courseName=${courseTitle}&coursePrice=${coursePrice}`;
+                        break;
+                    default:
+                        alert('Please select a payment method');
+                        return;
+                }
+
+                window.location.href = paymentUrl;
+            }
+        });
+    </script>
+</body>
+</html>
